@@ -25,5 +25,7 @@ app/google-services.json
 keystore.properties
 
 # --- Artifacts -------------------------------------------------------------
-# APKs are distributed through Supabase, not the repo.
-apk/*.apk
+# APKs are distributed through Supabase, not the repo. The whole folder is
+# ignored rather than just *.apk, so stray build artefacts never slip in.
+apk/
+keys/
