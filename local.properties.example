@@ -1,0 +1,24 @@
+# Copy this file to local.properties and fill in the real values.
+# local.properties is git-ignored — secrets never reach the repository.
+
+# Android SDK location.
+sdk.dir=C\:/Users/YOUR_USER/AppData/Local/Android/Sdk
+
+# ---------------------------------------------------------------------------
+# Groq Cloud — powers the in-app financial assistant.
+# Get keys at https://console.groq.com/keys
+# Several keys can be listed, comma separated; the client rotates on 401/429.
+# ---------------------------------------------------------------------------
+groq.keys=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+groq.model=openai/gpt-oss-120b
+
+# ---------------------------------------------------------------------------
+# Supabase — powers the in-app updater.
+# Dashboard -> Settings -> API
+#
+# Use the *anon public* key. It is designed to be shipped in a client; row
+# level security is what actually protects the data.
+# NEVER put the service_role key or the Postgres password here.
+# ---------------------------------------------------------------------------
+supabase.url=https://YOUR_PROJECT_REF.supabase.co
+supabase.anonKey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xxxxxxxx

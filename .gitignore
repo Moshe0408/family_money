@@ -1,0 +1,29 @@
+# --- Android / Gradle -------------------------------------------------------
+*.iml
+.gradle/
+.kotlin/
+/build
+/captures
+.externalNativeBuild
+.cxx
+/app/build
+local.properties
+
+# Build output is redirected to ~/AndroidBuilds/FamilyMoney (see build.gradle.kts)
+build_log.txt
+itest_log.txt
+
+# --- IDE -------------------------------------------------------------------
+/.idea/
+.DS_Store
+
+# --- Secrets ---------------------------------------------------------------
+# local.properties holds the Groq and Supabase keys — never commit it.
+app/google-services.json
+*.jks
+*.keystore
+keystore.properties
+
+# --- Artifacts -------------------------------------------------------------
+# APKs are distributed through Supabase, not the repo.
+apk/*.apk

@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>הכסף שלנו — ניהול גרסאות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#2563EB; --primary-dark:#1D4ED8; --primary-light:#DBEAFE;
+    --success:#10B981; --success-light:#D1FAE5;
+    --purple:#8B5CF6; --purple-light:#EDE9FE;
+    --warning:#F59E0B; --warning-light:#FEF3C7;
+    --danger:#EF4444;  --danger-light:#FEE2E2;
+    --bg:#F8FAFC; --card:#FFFFFF; --text:#111827; --muted:#6B7280;
+    --line:#E5E7EB; --line-soft:#EEF2F7;
+    --shadow:0 1px 3px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.04);
+    --shadow-lg:0 10px 30px rgba(16,24,40,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0B1120; --card:#1B2437; --text:#F3F4F6; --muted:#9CA3AF;
+      --line:#2C3550; --line-soft:#243049; --primary-light:#1E3A8A;
+      --success-light:#065F46; --purple-light:#4C1D95;
+      --warning-light:#78350F; --danger-light:#7F1D1D;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:Heebo,-apple-system,"Segoe UI",Arial,sans-serif;
+    line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:24px 20px 72px}
+  .hero{
+    background:linear-gradient(135deg,#2563EB 0%,#4F46E5 55%,#7C3AED 100%);
+    border-radius:24px;padding:28px;color:#fff;box-shadow:var(--shadow-lg);
+  }
+  .hero h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.3px}
+  .hero p{margin:6px 0 0;opacity:.9;font-size:15px}
+  .hero .badge{
+    display:inline-flex;align-items:center;gap:6px;margin-top:14px;
+    background:rgba(255,255,255,.18);border-radius:999px;padding:6px 14px;
+    font-size:13px;font-weight:500;
+  }
+  .card{
+    background:var(--card);border-radius:20px;padding:22px;margin-top:18px;
+    box-shadow:var(--shadow);border:1px solid var(--line-soft);
+  }
+  .card h2{margin:0 0 4px;font-size:19px;font-weight:600}
+  .card .sub{margin:0 0 18px;color:var(--muted);font-size:14px}
+  label{display:block;font-size:14px;font-weight:500;margin:14px 0 6px}
+  input[type=text],input[type=password],input[type=email],input[type=number],textarea{
+    width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;
+    background:var(--bg);color:var(--text);font:inherit;font-size:15px;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input:focus,textarea:focus{
+    outline:none;border-color:var(--primary);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 18%, transparent);
+  }
+  textarea{min-height:96px;resize:vertical}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row>*{flex:1;min-width:150px}
+  button{
+    font:inherit;font-weight:600;font-size:15px;border:0;border-radius:14px;
+    padding:13px 20px;cursor:pointer;transition:transform .08s, filter .15s;
+  }
+  button:active:not(:disabled){transform:translateY(1px)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{background:var(--primary);color:#fff}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.07)}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+  .btn-danger{background:var(--danger-light);color:var(--danger)}
+  .btn-block{width:100%}
+  .drop{
+    border:2px dashed var(--line);border-radius:18px;padding:34px 20px;text-align:center;
+    cursor:pointer;transition:border-color .15s, background .15s;background:var(--bg);
+  }
+  .drop:hover,.drop.over{border-color:var(--primary);background:var(--primary-light)}
+  .drop .icon{font-size:36px;line-height:1}
+  .drop .main{font-weight:600;margin-top:8px}
+  .drop .hint{color:var(--muted);font-size:13px;margin-top:4px}
+  .file-chip{
+    display:flex;align-items:center;gap:12px;background:var(--primary-light);
+    border-radius:14px;padding:14px;margin-top:12px;
+  }
+  .file-chip .name{font-weight:600;font-size:14px;word-break:break-all}
+  .file-chip .meta{color:var(--muted);font-size:13px}
+  .bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:12px}
+  .bar>i{display:block;height:100%;background:var(--primary);width:0;transition:width .25s}
+  .toggle{display:flex;align-items:center;gap:12px;margin-top:16px;cursor:pointer}
+  .toggle input{width:20px;height:20px;accent-color:var(--primary);cursor:pointer}
+  .toggle .t{font-weight:500;font-size:15px}
+  .toggle .d{color:var(--muted);font-size:13px}
+  .msg{border-radius:14px;padding:13px 16px;margin-top:14px;font-size:14px;display:none}
+  .msg.show{display:block}
+  .msg.ok{background:var(--success-light);color:var(--success)}
+  .msg.err{background:var(--danger-light);color:var(--danger)}
+  .msg.info{background:var(--primary-light);color:var(--primary)}
+  .rel{
+    display:flex;align-items:flex-start;gap:14px;padding:16px 0;
+    border-bottom:1px solid var(--line-soft);
+  }
+  .rel:last-child{border-bottom:0}
+  .rel .v{
+    background:var(--primary);color:#fff;border-radius:12px;padding:8px 12px;
+    font-weight:700;font-size:14px;white-space:nowrap;
+  }
+  .rel.draft .v{background:var(--muted)}
+  .rel .body{flex:1;min-width:0}
+  .rel .title{font-weight:600}
+  .rel .notes{color:var(--muted);font-size:14px;margin-top:3px;white-space:pre-wrap}
+  .rel .meta{color:var(--muted);font-size:12px;margin-top:6px}
+  .tag{
+    display:inline-block;border-radius:999px;padding:2px 9px;font-size:11px;
+    font-weight:600;margin-inline-start:6px;
+  }
+  .tag.must{background:var(--warning-light);color:var(--warning)}
+  .tag.draft{background:var(--line);color:var(--muted)}
+  .tag.live{background:var(--success-light);color:var(--success)}
+  .empty{text-align:center;padding:34px 16px;color:var(--muted)}
+  .empty .e{font-size:40px}
+  .muted-note{color:var(--muted);font-size:13px;margin-top:10px}
+  code{
+    background:var(--bg);border:1px solid var(--line);border-radius:6px;
+    padding:1px 6px;font-size:13px;direction:ltr;display:inline-block;
+  }
+  .hidden{display:none !important}
+  .spinner{
+    width:16px;height:16px;border:2px solid rgba(255,255,255,.35);
+    border-top-color:#fff;border-radius:50%;display:inline-block;
+    animation:spin .7s linear infinite;vertical-align:-3px;margin-inline-end:8px;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px}
+  .who{color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <h1>🚀 ניהול גרסאות</h1>
+    <p>העלאת עדכון לאפליקציית "הכסף שלנו"</p>
+    <div class="badge" id="connBadge">● לא מחובר</div>
+  </div>
+
+  <!-- ============================ 1. connection ============================ -->
+  <div class="card" id="setupCard">
+    <h2>חיבור ל-Supabase</h2>
+    <p class="sub">נשמר מקומית בדפדפן בלבד. ה-anon key מיועד לשימוש ציבורי.</p>
+
+    <label for="supaUrl">Project URL</label>
+    <input type="text" id="supaUrl" placeholder="https://xxxxxxxx.supabase.co" dir="ltr" autocomplete="off">
+
+    <label for="supaKey">anon public key</label>
+    <input type="password" id="supaKey" placeholder="eyJhbGciOi..." dir="ltr" autocomplete="off">
+
+    <button class="btn-primary btn-block" id="connectBtn" style="margin-top:18px">התחבר</button>
+    <div class="msg" id="setupMsg"></div>
+    <p class="muted-note">
+      Supabase Dashboard → Settings → API. אל תשתמש ב-<code>service_role</code>.
+    </p>
+  </div>
+
+  <!-- ============================== 2. login =============================== -->
+  <div class="card hidden" id="loginCard">
+    <h2>כניסת מנהל</h2>
+    <p class="sub">רק משתמש מחובר יכול לפרסם גרסה.</p>
+
+    <label for="email">אימייל</label>
+    <input type="email" id="email" dir="ltr" autocomplete="username">
+
+    <label for="password">סיסמה</label>
+    <input type="password" id="password" autocomplete="current-password">
+
+    <button class="btn-primary btn-block" id="loginBtn" style="margin-top:18px">כניסה</button>
+    <div class="msg" id="loginMsg"></div>
+    <p class="muted-note">
+      יצירת משתמש: Dashboard → Authentication → Users → Add user.
+    </p>
+  </div>
+
+  <!-- ============================== 3. publish ============================= -->
+  <div id="app" class="hidden">
+
+    <div class="topbar">
+      <span class="who" id="whoami"></span>
+      <button class="btn-ghost" id="logoutBtn">התנתק</button>
+    </div>
+
+    <div class="card">
+      <h2>פרסום גרסה חדשה</h2>
+      <p class="sub">גררו קובץ APK או לחצו לבחירה.</p>
+
+      <div class="drop" id="drop">
+        <div class="icon">📦</div>
+        <div class="main">בחרו קובץ APK</div>
+        <div class="hint">או גררו אותו לכאן</div>
+      </div>
+      <input type="file" id="file" accept=".apk,application/vnd.android.package-archive" class="hidden">
+
+      <div id="fileInfo" class="hidden"></div>
+
+      <div class="row">
+        <div>
+          <label for="versionCode">Version Code</label>
+          <input type="number" id="versionCode" min="1" step="1" placeholder="2" dir="ltr">
+        </div>
+        <div>
+          <label for="versionName">Version Name</label>
+          <input type="text" id="versionName" placeholder="1.1.0" dir="ltr">
+        </div>
+      </div>
+      <p class="muted-note" id="vcHint"></p>
+
+      <label for="notes">מה חדש בגרסה</label>
+      <textarea id="notes" placeholder="• תוקן באג בתצוגת התקציב&#10;• נוסף גרף מגמה חדש"></textarea>
+
+      <label class="toggle" for="mandatory">
+        <input type="checkbox" id="mandatory">
+        <span>
+          <span class="t">עדכון חובה</span><br>
+          <span class="d">האפליקציה תחסום שימוש עד להתקנת העדכון</span>
+        </span>
+      </label>
+
+      <label class="toggle" for="published">
+        <input type="checkbox" id="published" checked>
+        <span>
+          <span class="t">פרסם מיד</span><br>
+          <span class="d">בטלו כדי להעלות כטיוטה ולפרסם מאוחר יותר</span>
+        </span>
+      </label>
+
+      <div class="bar hidden" id="barWrap"><i id="bar"></i></div>
+      <div class="msg" id="pubMsg"></div>
+
+      <button class="btn-primary btn-block" id="publishBtn" style="margin-top:18px" disabled>
+        פרסם עדכון
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>גרסאות שפורסמו</h2>
+      <p class="sub">הגרסה העליונה היא זו שהאפליקציה תציע.</p>
+      <div id="list"><div class="empty"><div class="e">⏳</div>טוען…</div></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const $ = id => document.getElementById(id);
+const LS = 'familymoney.supabase';
+
+/**
+ * localStorage throws on file:// and data: URLs in some browsers. Remembering
+ * the connection is a convenience, never a requirement, so failures are
+ * swallowed and the page simply asks for the details again.
+ */
+const store = {
+  read() {
+    try { return localStorage.getItem(LS); } catch { return null; }
+  },
+  write(value) {
+    try { localStorage.setItem(LS, value); } catch { /* session-only */ }
+  }
+};
+
+let sb = null;
+let apkFile = null;
+let apkSha = null;
+
+// ------------------------------------------------------------------ helpers
+
+function show(el, text, kind) {
+  el.textContent = text;
+  el.className = 'msg show ' + kind;
+}
+function hide(el) { el.className = 'msg'; }
+
+function humanSize(bytes) {
+  if (!bytes) return '0 B';
+  const mb = bytes / 1048576;
+  return mb >= 1 ? mb.toFixed(1) + ' MB' : (bytes / 1024).toFixed(0) + ' KB';
+}
+
+function setBadge(connected, label) {
+  $('connBadge').textContent = (connected ? '● ' : '● ') + label;
+  $('connBadge').style.opacity = connected ? '1' : '.75';
+}
+
+/** SHA-256 of the file, so the app can verify the download it receives. */
+async function sha256(file) {
+  const buf = await file.arrayBuffer();
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// --------------------------------------------------------------- connection
+
+function connect(url, key, quiet) {
+  try {
+    sb = createClient(url.replace(/\/+$/, ''), key);
+  } catch (e) {
+    if (!quiet) show($('setupMsg'), 'כתובת או מפתח לא תקינים.', 'err');
+    return false;
+  }
+  store.write(JSON.stringify({ url, key }));
+  $('setupCard').classList.add('hidden');
+  setBadge(true, 'מחובר ל-Supabase');
+  checkSession();
+  return true;
+}
+
+$('connectBtn').onclick = () => {
+  const url = $('supaUrl').value.trim();
+  const key = $('supaKey').value.trim();
+  if (!url || !key) {
+    show($('setupMsg'), 'צריך גם כתובת וגם מפתח.', 'err');
+    return;
+  }
+  if (!/^https:\/\/.+\.supabase\.(co|in)$/.test(url.replace(/\/+$/, ''))) {
+    show($('setupMsg'), 'ה-URL אמור להיראות כך: https://xxxx.supabase.co', 'err');
+    return;
+  }
+  connect(url, key, false);
+};
+
+// ------------------------------------------------------------------- session
+
+async function checkSession() {
+  const { data } = await sb.auth.getSession();
+  if (data.session) {
+    onSignedIn(data.session.user);
+  } else {
+    $('loginCard').classList.remove('hidden');
+    $('app').classList.add('hidden');
+  }
+}
+
+function onSignedIn(user) {
+  $('loginCard').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  $('whoami').textContent = '👤 ' + user.email;
+  setBadge(true, 'מחובר · ' + user.email);
+  loadReleases();
+}
+
+$('loginBtn').onclick = async () => {
+  const btn = $('loginBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>מתחבר…';
+  hide($('loginMsg'));
+
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: $('email').value.trim(),
+    password: $('password').value
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'כניסה';
+
+  if (error) {
+    show($('loginMsg'), 'התחברות נכשלה: ' + error.message, 'err');
+    return;
+  }
+  $('password').value = '';
+  onSignedIn(data.user);
+};
+
+$('logoutBtn').onclick = async () => {
+  await sb.auth.signOut();
+  $('app').classList.add('hidden');
+  $('loginCard').classList.remove('hidden');
+  setBadge(true, 'מחובר ל-Supabase');
+};
+
+// ---------------------------------------------------------------- file pick
+
+$('drop').onclick = () => $('file').click();
+$('drop').ondragover = e => { e.preventDefault(); $('drop').classList.add('over'); };
+$('drop').ondragleave = () => $('drop').classList.remove('over');
+$('drop').ondrop = e => {
+  e.preventDefault();
+  $('drop').classList.remove('over');
+  if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
+};
+$('file').onchange = e => { if (e.target.files[0]) pickFile(e.target.files[0]); };
+
+async function pickFile(f) {
+  if (!f.name.toLowerCase().endsWith('.apk')) {
+    show($('pubMsg'), 'צריך קובץ עם סיומת .apk', 'err');
+    return;
+  }
+  apkFile = f;
+  apkSha = null;
+  hide($('pubMsg'));
+
+  $('fileInfo').className = 'file-chip';
+  $('fileInfo').innerHTML =
+    `<span style="font-size:26px">📦</span>
+     <span style="flex:1;min-width:0">
+       <span class="name">${f.name}</span><br>
+       <span class="meta">${humanSize(f.size)} · מחשב SHA-256…</span>
+     </span>`;
+
+  // Guess the version name from a filename like FamilyMoney-1.2.0.apk
+  const m = f.name.match(/(\d+\.\d+(?:\.\d+)?)/);
+  if (m && !$('versionName').value) $('versionName').value = m[1];
+
+  apkSha = await sha256(f);
+  $('fileInfo').querySelector('.meta').textContent =
+    `${humanSize(f.size)} · SHA-256 ${apkSha.slice(0, 12)}…`;
+  validate();
+}
+
+// ---------------------------------------------------------------- validation
+
+['versionCode', 'versionName'].forEach(id => $(id).oninput = validate);
+
+let latestCode = 0;
+function validate() {
+  const vc = parseInt($('versionCode').value, 10);
+  const vn = $('versionName').value.trim();
+  let ok = !!apkFile && Number.isInteger(vc) && vc > 0 && vn.length > 0;
+
+  if (Number.isInteger(vc) && vc <= latestCode) {
+    $('vcHint').textContent =
+      `⚠️ הגרסה הקיימת היא ${latestCode}. ה-Version Code חייב להיות גדול ממנה.`;
+    $('vcHint').style.color = 'var(--danger)';
+    ok = false;
+  } else if (latestCode) {
+    $('vcHint').textContent = `הגרסה הקיימת: ${latestCode}. הבאה בתור: ${latestCode + 1}.`;
+    $('vcHint').style.color = 'var(--muted)';
+  } else {
+    $('vcHint').textContent = 'חייב להיות מספר שלם שגדל בכל גרסה.';
+    $('vcHint').style.color = 'var(--muted)';
+  }
+  $('publishBtn').disabled = !ok;
+}
+
+// ------------------------------------------------------------------ publish
+
+$('publishBtn').onclick = async () => {
+  const btn = $('publishBtn');
+  const vc = parseInt($('versionCode').value, 10);
+  const vn = $('versionName').value.trim();
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>מעלה…';
+  $('barWrap').classList.remove('hidden');
+  $('bar').style.width = '10%';
+  show($('pubMsg'), 'מעלה את ה-APK ל-Storage…', 'info');
+
+  const path = `familymoney-${vc}-${Date.now()}.apk`;
+
+  const { error: upErr } = await sb.storage.from('apk').upload(path, apkFile, {
+    contentType: 'application/vnd.android.package-archive',
+    upsert: false
+  });
+
+  if (upErr) {
+    $('bar').style.width = '0';
+    show($('pubMsg'), 'העלאה נכשלה: ' + upErr.message, 'err');
+    btn.disabled = false;
+    btn.textContent = 'פרסם עדכון';
+    return;
+  }
+
+  $('bar').style.width = '70%';
+  show($('pubMsg'), 'רושם את הגרסה…', 'info');
+
+  const { data: pub } = sb.storage.from('apk').getPublicUrl(path);
+
+  const { error: insErr } = await sb.from('app_releases').insert({
+    version_code: vc,
+    version_name: vn,
+    apk_url: pub.publicUrl,
+    file_size: apkFile.size,
+    sha256: apkSha,
+    release_notes: $('notes').value.trim(),
+    mandatory: $('mandatory').checked,
+    published: $('published').checked
+  });
+
+  if (insErr) {
+    show($('pubMsg'), 'הקובץ הועלה אך הרישום נכשל: ' + insErr.message, 'err');
+    $('bar').style.width = '0';
+    btn.disabled = false;
+    btn.textContent = 'פרסם עדכון';
+    return;
+  }
+
+  $('bar').style.width = '100%';
+  show($('pubMsg'),
+    $('published').checked
+      ? `✅ גרסה ${vn} פורסמה. המכשירים יראו אותה בפתיחה הבאה.`
+      : `✅ גרסה ${vn} נשמרה כטיוטה.`,
+    'ok');
+
+  // Reset for the next release.
+  apkFile = null; apkSha = null;
+  $('file').value = '';
+  $('fileInfo').className = 'hidden';
+  $('versionCode').value = '';
+  $('versionName').value = '';
+  $('notes').value = '';
+  $('mandatory').checked = false;
+  btn.textContent = 'פרסם עדכון';
+  setTimeout(() => { $('barWrap').classList.add('hidden'); $('bar').style.width = '0'; }, 900);
+
+  loadReleases();
+};
+
+// -------------------------------------------------------------- release list
+
+async function loadReleases() {
+  const { data, error } = await sb
+    .from('app_releases')
+    .select('*')
+    .order('version_code', { ascending: false });
+
+  if (error) {
+    $('list').innerHTML =
+      `<div class="empty"><div class="e">⚠️</div>${error.message}</div>`;
+    return;
+  }
+
+  if (!data.length) {
+    $('list').innerHTML =
+      '<div class="empty"><div class="e">📭</div>עוד לא פורסמה אף גרסה</div>';
+    latestCode = 0;
+    validate();
+    return;
+  }
+
+  latestCode = Math.max(...data.map(r => r.version_code));
+  $('versionCode').placeholder = String(latestCode + 1);
+  validate();
+
+  $('list').innerHTML = data.map(r => `
+    <div class="rel ${r.published ? '' : 'draft'}">
+      <span class="v">${r.version_name}</span>
+      <span class="body">
+        <span class="title">
+          Version Code ${r.version_code}
+          ${r.published ? '<span class="tag live">פעיל</span>' : '<span class="tag draft">טיוטה</span>'}
+          ${r.mandatory ? '<span class="tag must">חובה</span>' : ''}
+        </span>
+        ${r.release_notes ? `<div class="notes">${escapeHtml(r.release_notes)}</div>` : ''}
+        <div class="meta">
+          ${humanSize(r.file_size)} ·
+          ${new Date(r.created_at).toLocaleDateString('he-IL')} ·
+          <a href="${r.apk_url}" dir="ltr">הורדה</a>
+        </div>
+      </span>
+      <button class="btn-danger" data-del="${r.id}" title="מחיקה">🗑</button>
+    </div>`).join('');
+
+  $('list').querySelectorAll('[data-del]').forEach(b => {
+    b.onclick = async () => {
+      if (!confirm('למחוק את הגרסה? מכשירים שכבר הורידו אותה לא יושפעו.')) return;
+      await sb.from('app_releases').delete().eq('id', b.dataset.del);
+      loadReleases();
+    };
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ------------------------------------------------------------------ startup
+
+const saved = store.read();
+if (saved) {
+  try {
+    const { url, key } = JSON.parse(saved);
+    $('supaUrl').value = url;
+    $('supaKey').value = key;
+    connect(url, key, true);
+  } catch { /* fall through to the setup card */ }
+} else {
+  setBadge(false, 'לא מחובר');
+}
+</script>
+</body>
+</html>
