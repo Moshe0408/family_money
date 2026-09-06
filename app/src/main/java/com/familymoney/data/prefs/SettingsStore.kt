@@ -34,12 +34,14 @@ class SettingsStore(context: Context) {
 
     // ------------------------------------------------------------ appearance
 
-    private val _darkMode = MutableStateFlow(plain.getString(KEY_THEME, "system")!!)
-    val darkMode: StateFlow<String> = _darkMode
+    private val _palette = MutableStateFlow(plain.getString(KEY_PALETTE, "midnight")!!)
 
-    fun setThemeMode(mode: String) {
-        plain.edit().putString(KEY_THEME, mode).apply()
-        _darkMode.value = mode
+    /** Id of the selected AppPalette. Screens observe this to recompose. */
+    val palette: StateFlow<String> = _palette
+
+    fun setPalette(id: String) {
+        plain.edit().putString(KEY_PALETTE, id).apply()
+        _palette.value = id
     }
 
     // -------------------------------------------------------------- security
@@ -139,7 +141,7 @@ class SettingsStore(context: Context) {
     }
 
     private companion object {
-        const val KEY_THEME = "theme_mode"
+        const val KEY_PALETTE = "app_palette"
         const val KEY_BIOMETRIC = "biometric_lock"
         const val KEY_AUTOLOCK = "auto_lock_minutes"
         const val KEY_PIN = "pin_hash"

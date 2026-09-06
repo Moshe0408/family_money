@@ -24,6 +24,9 @@ class FamilyMoneyApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        // PdfBox ships its fonts and CMaps as assets and must be pointed at
+        // them before any PDF is opened.
+        com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(applicationContext)
         createNotificationChannel()
         container.syncManager.startIfConfigured()
     }

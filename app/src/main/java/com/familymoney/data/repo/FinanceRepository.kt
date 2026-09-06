@@ -377,6 +377,39 @@ class FinanceRepository(context: Context) {
 
     suspend fun transactionCount(): Int = db.transactionDao().count()
 
+    // ------------------------------------------------------- selective delete
+
+    suspend fun countInRange(from: Long, to: Long) = db.transactionDao().countRange(from, to)
+
+    suspend fun countFromImports(): Int =
+        db.transactionDao().countBySource(com.familymoney.data.model.TxSource.IMPORT.name)
+
+    suspend fun deleteTransactionsInRange(from: Long, to: Long, actor: String): Int {
+        val n = db.transactionDao().deleteRange(from, to)
+        audit(actor, "delete_range", "$n עסקאות")
+        return n
+    }
+
+    suspend fun deleteImportedTransactions(actor: String): Int {
+        val n = db.transactionDao().deleteBySource(com.familymoney.data.model.TxSource.IMPORT.name)
+        audit(actor, "delete_imported", "$n עסקאות")
+        return n
+    }
+
+    suspend fun deleteCategory(category: String, actor: String): Int {
+        val n = db.transactionDao().deleteByCategory(category)
+        audit(actor, "delete_category", "$category: $n עסקאות")
+        return n
+    }
+
+    /** Clears movements but keeps the setup: accounts, cards, goals, budgets. */
+    suspend fun deleteAllTransactions(actor: String) {
+        db.transactionDao().clear()
+        db.recurringDao().clear()
+        db.categoryRuleDao().clear()
+        audit(actor, "delete_all_transactions")
+    }
+
     val monthlyTotals: Flow<List<MonthTotal>> = transactions.map { txs ->
         txs.groupBy { Dates.yearMonthKey(it.date) }
             .map { (key, list) ->

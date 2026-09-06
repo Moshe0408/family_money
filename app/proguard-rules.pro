@@ -39,3 +39,16 @@
 # Compose keeps enough metadata already; silence the usual noise.
 -dontwarn androidx.compose.**
 -dontwarn javax.annotation.**
+
+# PdfBox-Android ------------------------------------------------------------
+# JPXDecoder is an optional JPEG-2000 backend used only for images embedded in
+# a PDF. This app reads the text layer only, so the class is never reached.
+-dontwarn com.gemalto.jp2.**
+-dontwarn org.bouncycastle.**
+-dontwarn javax.naming.**
+
+# PdfBox resolves fonts, filters and CMaps by name at runtime.
+-keep class com.tom_roush.pdfbox.** { *; }
+-keep class com.tom_roush.fontbox.** { *; }
+-keep class com.tom_roush.harmony.** { *; }
+-dontwarn com.tom_roush.**

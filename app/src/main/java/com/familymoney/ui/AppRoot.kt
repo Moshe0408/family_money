@@ -59,6 +59,7 @@ import com.familymoney.ui.screens.AiChatScreen
 import com.familymoney.ui.screens.BudgetScreen
 import com.familymoney.ui.screens.CardsScreen
 import com.familymoney.ui.screens.ChildrenScreen
+import com.familymoney.ui.screens.DataScreen
 import com.familymoney.ui.screens.FamilyScreen
 import com.familymoney.ui.screens.ForecastScreen
 import com.familymoney.ui.screens.GoalsScreen
@@ -288,6 +289,7 @@ private fun AppNavHost(
         composable(Routes.IMPORT) { ImportScreen(vm, container, navController) }
         composable(Routes.LIABILITIES) { LiabilitiesScreen(vm, navController) }
         composable(Routes.UPDATE) { UpdateScreen(container, navController) }
+        composable(Routes.DATA) { DataScreen(vm, navController) }
         composable("${Routes.FAMILY}?code={code}") { entry ->
             FamilyScreen(vm, container, navController, entry.arguments?.getString("code"))
         }
@@ -343,16 +345,6 @@ private fun UpdateBanner(
 /** Shared full-bleed gradient used by hero headers. */
 @Composable
 fun heroBrush(): Brush {
-    val dark = com.familymoney.ui.theme.LocalIsDark.current
-    return Brush.linearGradient(
-        if (dark) listOf(
-            com.familymoney.ui.theme.HeroGradientStartDark,
-            com.familymoney.ui.theme.HeroGradientMidDark,
-            com.familymoney.ui.theme.HeroGradientEndDark
-        ) else listOf(
-            com.familymoney.ui.theme.HeroGradientStart,
-            com.familymoney.ui.theme.HeroGradientMid,
-            com.familymoney.ui.theme.HeroGradientEnd
-        )
-    )
+    val p = com.familymoney.ui.theme.LocalPalette.current
+    return Brush.linearGradient(listOf(p.heroStart, p.heroMid, p.heroEnd))
 }

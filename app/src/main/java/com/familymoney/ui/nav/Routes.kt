@@ -39,6 +39,7 @@ object Routes {
     const val IMPORT = "import"
     const val LIABILITIES = "liabilities"
     const val UPDATE = "update"
+    const val DATA = "data"
 }
 
 data class BottomTab(

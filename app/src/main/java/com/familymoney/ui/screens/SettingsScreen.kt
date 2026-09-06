@@ -1,5 +1,11 @@
 package com.familymoney.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,7 +55,7 @@ import com.familymoney.util.Security
 fun SettingsScreen(vm: MainViewModel, container: AppContainer, navController: NavHostController) {
     val settings = container.settings
     val profile by vm.profile.collectAsState()
-    val themeMode by settings.darkMode.collectAsState()
+    val paletteId by settings.palette.collectAsState()
 
     var biometric by remember { mutableStateOf(settings.biometricLock) }
     var notifications by remember { mutableStateOf(settings.notificationsEnabled) }
@@ -83,19 +89,19 @@ fun SettingsScreen(vm: MainViewModel, container: AppContainer, navController: Na
                 MenuGroup("מראה") {
                     Column(Modifier.padding(12.dp)) {
                         Text("ערכת נושא", style = MaterialTheme.typography.titleSmall)
-                        Spacer(Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(
-                                "system" to "לפי המערכת",
-                                "light" to "☀️ בהיר",
-                                "dark" to "🌙 כהה"
-                            ).forEach { (key, label) ->
-                                Pill(
-                                    label,
-                                    MaterialTheme.colorScheme.primary,
-                                    selected = themeMode == key
-                                ) { settings.setThemeMode(key) }
-                            }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "בחרו את המראה שמתאים לכם.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        com.familymoney.ui.theme.AppPalette.entries.forEach { option ->
+                            PaletteRow(
+                                option = option,
+                                selected = paletteId == option.id,
+                                onSelect = { settings.setPalette(option.id) }
+                            )
                         }
                     }
                 }
@@ -173,7 +179,10 @@ fun SettingsScreen(vm: MainViewModel, container: AppContainer, navController: Na
                     MenuRow("🔍", "סריקת הוצאות קבועות", "זיהוי מחדש של חיובים חוזרים") {
                         vm.rescanRecurring()
                     }
-                    MenuRow("🗑️", "מחיקת כל הנתונים", "פעולה בלתי הפיכה") {
+                    MenuRow("🗂️", "ניהול ומחיקת נתונים", "מחיקה לפי תקופה, מקור או קטגוריה") {
+                        navController.navigate(Routes.DATA)
+                    }
+                    MenuRow("🗑️", "מחיקת הכול", "איפוס מלא — פעולה בלתי הפיכה") {
                         confirmWipe = true
                     }
                 }
@@ -307,6 +316,56 @@ fun SettingsScreen(vm: MainViewModel, container: AppContainer, navController: Na
             vm = vm,
             onDismiss = { showProfileSheet = false }
         )
+    }
+}
+
+/** One selectable theme, previewed with its own three key colours. */
+@Composable
+private fun PaletteRow(
+    option: com.familymoney.ui.theme.AppPalette,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    androidx.compose.material3.Surface(
+        onClick = onSelect,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surfaceContainer,
+        border = if (selected)
+            androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        else null
+    ) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Three overlapping dots preview the palette without rendering it.
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                option.swatch.forEach { c ->
+                    Box(
+                        Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(c)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                    )
+                }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(option.he, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    option.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (selected) {
+                Text(
+                    "✓",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
     }
 }
 

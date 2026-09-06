@@ -46,6 +46,7 @@ import com.familymoney.data.model.TxType
 import com.familymoney.engine.Recommendation
 import com.familymoney.ui.components.CategoryAvatar
 import com.familymoney.ui.components.DonutChart
+import com.familymoney.ui.components.LineChart
 import com.familymoney.ui.components.DonutSlice
 import com.familymoney.ui.components.ProgressBar
 import com.familymoney.ui.components.SectionCard
@@ -54,6 +55,7 @@ import com.familymoney.ui.components.StatTile
 import com.familymoney.ui.heroBrush
 import com.familymoney.ui.nav.Routes
 import com.familymoney.ui.theme.CategoryPalette
+import com.familymoney.ui.theme.LocalPalette
 import com.familymoney.ui.theme.MoneyLarge
 import com.familymoney.ui.theme.MoneySmall
 import com.familymoney.ui.theme.Success
@@ -99,6 +101,13 @@ fun HomeScreen(vm: MainViewModel, navController: NavHostController) {
                 income = s?.monthIncome ?: 0.0,
                 expense = s?.monthExpense ?: 0.0,
                 saving = s?.monthSaving ?: 0.0,
+                trend = snapshots.takeLast(6).map { it.total }.reversed(),
+                trendLabels = snapshots.takeLast(6).reversed().map { snap ->
+                    val parts = snap.yearMonth.split("-")
+                    runCatching {
+                        Dates.hebrewMonth(YearMonth.of(parts[0].toInt(), parts[1].toInt())).take(3)
+                    }.getOrDefault("")
+                },
                 onClick = { navController.navigate(Routes.NET_WORTH) }
             )
         }
@@ -311,66 +320,114 @@ private fun HeroCard(
     income: Double,
     expense: Double,
     saving: Double,
+    trend: List<Double>,
+    trendLabels: List<String>,
     onClick: () -> Unit
 ) {
+    val p = LocalPalette.current
+
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = p.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, p.outline),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Box(Modifier.background(heroBrush()).padding(22.dp)) {
-            Column {
-                Text(
-                    "המצב הפיננסי שלנו",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.85f)
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(Money.format(netWorth), style = MoneyLarge, color = Color.White)
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                "סך הכל יתרה",
+                style = MaterialTheme.typography.bodyMedium,
+                color = p.textMuted
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(Money.format(netWorth), style = MoneyLarge, color = p.text)
 
-                if (changePercent != null) {
-                    Spacer(Modifier.height(8.dp))
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.18f)
-                    ) {
-                        Text(
-                            "${if (changePercent >= 0) "▲" else "▼"} ${Money.percent(changePercent)} החודש",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White
+            Spacer(Modifier.height(18.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // The chart carries the trend; the pills carry the detail.
+                Box(Modifier.weight(1f)) {
+                    if (trend.size >= 2) {
+                        LineChart(
+                            values = trend,
+                            labels = trendLabels,
+                            lineColor = p.accent,
+                            height = 96.dp,
+                            showDots = false
                         )
                     }
                 }
-
-                Spacer(Modifier.height(20.dp))
-                Box(
-                    Modifier.fillMaxWidth().height(1.dp)
-                        .background(Color.White.copy(alpha = 0.22f))
-                )
-                Spacer(Modifier.height(16.dp))
-
-                Row(Modifier.fillMaxWidth()) {
-                    HeroStat("הכנסות", Money.format(income), Modifier.weight(1f))
-                    HeroStat("הוצאות", Money.format(expense), Modifier.weight(1f))
-                    HeroStat("חיסכון", Money.format(saving), Modifier.weight(1f))
+                Spacer(Modifier.width(14.dp))
+                Column {
+                    TrendPill(
+                        label = "הכנסות",
+                        value = Money.format(income),
+                        delta = changePercent,
+                        color = p.positive
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    TrendPill(
+                        label = "הוצאות",
+                        value = Money.format(expense),
+                        delta = null,
+                        color = p.negative
+                    )
                 }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(p.outlineSoft))
+            Spacer(Modifier.height(14.dp))
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "חיסכון החודש",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = p.textMuted
+                )
+                Text(
+                    Money.signed(saving),
+                    style = MoneySmall,
+                    color = if (saving >= 0) p.positive else p.negative
+                )
             }
         }
     }
 }
 
+/** Vertical accent bar plus a value — the compact readout in the hero card. */
 @Composable
-private fun HeroStat(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.8f)
+private fun TrendPill(
+    label: String,
+    value: String,
+    delta: Double?,
+    color: androidx.compose.ui.graphics.Color
+) {
+    val p = LocalPalette.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(horizontalAlignment = Alignment.End) {
+            Text(label, style = MaterialTheme.typography.bodySmall, color = p.textMuted)
+            Text(value, style = MoneySmall, color = p.text)
+            if (delta != null) {
+                Text(
+                    Money.percent(delta, signed = true),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (delta >= 0) p.positive else p.negative
+                )
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Box(
+            Modifier
+                .width(5.dp)
+                .height(if (delta != null) 44.dp else 34.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(color)
         )
-        Spacer(Modifier.height(3.dp))
-        Text(value, style = MoneySmall, color = Color.White)
     }
 }
 

@@ -77,6 +77,8 @@ fun ImportScreen(
     var pastedText by remember { mutableStateOf("") }
     var aiBusy by remember { mutableStateOf(false) }
     var aiError by remember { mutableStateOf<String?>(null) }
+    var pdfName by remember { mutableStateOf("") }
+    var pdfPages by remember { mutableStateOf(0) }
 
     fun process(uri: Uri) {
         loading = true
@@ -150,6 +152,43 @@ fun ImportScreen(
         }
     }
 
+    fun processPdf(uri: Uri) {
+        aiBusy = true
+        aiError = null
+        scope.launch {
+            when (val ex = com.familymoney.data.bank.PdfTextExtractor.extract(context, uri)) {
+                is com.familymoney.data.bank.PdfTextExtractor.Result.Error -> {
+                    aiError = ex.message
+                    aiBusy = false
+                }
+                is com.familymoney.data.bank.PdfTextExtractor.Result.Ok -> {
+                    pastedText = ex.text
+                    pdfPages = ex.pages
+                    when (val r = container.statementParser.parse(ex.text)) {
+                        is com.familymoney.data.ai.StatementParser.Result.Error -> {
+                            aiError = r.message
+                            report = null
+                            prepared = emptyList()
+                        }
+                        is com.familymoney.data.ai.StatementParser.Result.Ok -> {
+                            report = CsvImporter.Report(
+                                rows = r.rows,
+                                skipped = r.skipped,
+                                detectedColumns = mapOf("מקור" to "קובץ PDF (${ex.pages} עמודים)")
+                            )
+                            buildPreview(r.rows)
+                        }
+                    }
+                    aiBusy = false
+                }
+            }
+        }
+    }
+
+    val pdfPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> uri?.let { pdfName = it.lastPathSegment.orEmpty(); processPdf(it) } }
+
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let { fileName = it.lastPathSegment.orEmpty(); process(it) } }
@@ -162,11 +201,11 @@ fun ImportScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Pill(
-                        "📄 קובץ CSV", MaterialTheme.colorScheme.primary,
+                        "📊 קובץ CSV", MaterialTheme.colorScheme.primary,
                         selected = mode == ImportMode.FILE
                     ) { mode = ImportMode.FILE; report = null; prepared = emptyList(); aiError = null }
                     Pill(
-                        "✨ הדבקת טקסט (PDF)", MaterialTheme.colorScheme.secondary,
+                        "📄 קובץ PDF", MaterialTheme.colorScheme.secondary,
                         selected = mode == ImportMode.PASTE
                     ) { mode = ImportMode.PASTE; report = null; prepared = emptyList(); aiError = null }
                 }
@@ -176,55 +215,21 @@ fun ImportScreen(
                 item {
                     SectionCard {
                         Text("ייבוא מ־PDF", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(10.dp))
-                        listOf(
-                            "פתחו את דף החשבון (PDF) בנייד או במחשב.",
-                            "סמנו את טבלת התנועות והעתיקו (Ctrl+A ואז Ctrl+C).",
-                            "הדביקו כאן — ה־AI יחלץ את העסקאות.",
-                            "בדקו את התצוגה המקדימה ואשרו."
-                        ).forEachIndexed { i, step ->
-                            Row(Modifier.padding(vertical = 4.dp)) {
-                                Text("${'$'}{i + 1}. ", style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    step,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(6.dp))
                         Text(
-                            "הטקסט נשלח לעיבוד ומשמש רק לחילוץ העסקאות. אין צורך להעתיק " +
-                                "מספרי חשבון או פרטים מזהים.",
-                            style = MaterialTheme.typography.bodySmall,
+                            "העלו את דף החשבון שהורדתם מהבנק. האפליקציה קוראת את " +
+                                "הטקסט מהקובץ וה־AI מחלץ ממנו את העסקאות.",
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                }
+                        Spacer(Modifier.height(16.dp))
 
-                item {
-                    SectionCard {
-                        androidx.compose.material3.OutlinedTextField(
-                            value = pastedText,
-                            onValueChange = { pastedText = it },
-                            label = { Text("הדביקו כאן את תוכן דף החשבון") },
-                            placeholder = { Text("05/09/2026  שופרסל דיל  342.50 ...") },
-                            modifier = Modifier.fillMaxWidth().height(200.dp),
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                        if (pastedText.isNotBlank()) {
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                "${'$'}{pastedText.length} תווים",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Spacer(Modifier.height(14.dp))
                         Button(
-                            onClick = { parsePastedText() },
-                            enabled = pastedText.trim().length >= 20 && !aiBusy,
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            onClick = {
+                                pdfPicker.launch(arrayOf("application/pdf"))
+                            },
+                            enabled = !aiBusy,
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             if (aiBusy) {
@@ -234,10 +239,20 @@ fun ImportScreen(
                                     color = MaterialTheme.colorScheme.onPrimary
                                 )
                                 Spacer(Modifier.width(10.dp))
-                                Text("מנתח…")
+                                Text("קורא וממיין…")
                             } else {
-                                Text("✨ חלץ עסקאות")
+                                Text("📄 בחר קובץ PDF")
                             }
+                        }
+
+                        if (pdfName.isNotBlank() && !aiBusy) {
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                "נקרא: $pdfName" +
+                                    if (pdfPages > 0) " · $pdfPages עמודים" else "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
 
                         aiError?.let {
@@ -248,6 +263,48 @@ fun ImportScreen(
                                 color = MaterialTheme.colorScheme.error
                             )
                         }
+
+                        Spacer(Modifier.height(14.dp))
+                        Text(
+                            "הטקסט משמש לחילוץ העסקאות בלבד. אין צורך להעלות מסמכים " +
+                                "שאינם דף חשבון.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                item {
+                    SectionCard {
+                        Text(
+                            "או הדביקו טקסט ידנית",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "שימושי אם ה־PDF מוגן או סרוק.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        androidx.compose.material3.OutlinedTextField(
+                            value = pastedText,
+                            onValueChange = { pastedText = it },
+                            label = { Text("תוכן דף החשבון") },
+                            modifier = Modifier.fillMaxWidth().height(150.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Button(
+                            onClick = { parsePastedText() },
+                            enabled = pastedText.trim().length >= 20 && !aiBusy,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) { Text("✨ חלץ מהטקסט") }
                     }
                 }
             }

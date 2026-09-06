@@ -48,6 +48,21 @@ interface TransactionDao {
     @Query("DELETE FROM transactions")
     suspend fun clear()
 
+    @Query("DELETE FROM transactions WHERE date BETWEEN :from AND :to")
+    suspend fun deleteRange(from: Long, to: Long): Int
+
+    @Query("DELETE FROM transactions WHERE source = :source")
+    suspend fun deleteBySource(source: String): Int
+
+    @Query("DELETE FROM transactions WHERE category = :category")
+    suspend fun deleteByCategory(category: String): Int
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE date BETWEEN :from AND :to")
+    suspend fun countRange(from: Long, to: Long): Int
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE source = :source")
+    suspend fun countBySource(source: String): Int
+
     @Query("SELECT COUNT(*) FROM transactions")
     suspend fun count(): Int
 }

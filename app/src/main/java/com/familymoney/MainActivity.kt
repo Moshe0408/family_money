@@ -24,8 +24,8 @@ class MainActivity : AppCompatActivity() {
             ?.getQueryParameter("code")
 
         setContent {
-            val themeMode by container.settings.darkMode.collectAsState()
-            FamilyMoneyTheme(themeMode = themeMode) {
+            val paletteId by container.settings.palette.collectAsState()
+            FamilyMoneyTheme(paletteId = paletteId) {
                 AppRoot(container = container, pendingInviteCode = inviteCode)
             }
         }

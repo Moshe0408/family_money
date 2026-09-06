@@ -327,6 +327,32 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         showToast("נתוני הדגמה נטענו")
     }
 
+    fun deleteRange(from: Long, to: Long) = viewModelScope.launch {
+        val n = repo.deleteTransactionsInRange(from, to, actorName())
+        afterWrite()
+        showToast("נמחקו $n עסקאות")
+    }
+
+    fun deleteImported() = viewModelScope.launch {
+        val n = repo.deleteImportedTransactions(actorName())
+        afterWrite()
+        showToast("נמחקו $n עסקאות מיובאות")
+    }
+
+    fun deleteCategory(category: String) = viewModelScope.launch {
+        val n = repo.deleteCategory(category, actorName())
+        afterWrite()
+        showToast("נמחקו $n עסקאות")
+    }
+
+    fun deleteAllTransactions() = viewModelScope.launch {
+        repo.deleteAllTransactions(actorName())
+        afterWrite()
+        showToast("כל העסקאות נמחקו")
+    }
+
+    private fun actorName() = profile.value?.name.orEmpty().ifBlank { "משתמש" }
+
     fun clearAllData() = viewModelScope.launch {
         _busy.value = true
         repo.wipeAll()
