@@ -65,6 +65,13 @@ android {
                 storePassword = keystoreProps.getProperty("storePassword")
                 keyAlias = keystoreProps.getProperty("keyAlias")
                 keyPassword = keystoreProps.getProperty("keyPassword")
+
+                // Sign with every scheme. v2 alone is valid from API 24 up, but
+                // some OEM package installers reject a sideloaded APK that has
+                // no v1 (JAR) signature, which surfaces as "App not installed".
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
             }
         }
     }
