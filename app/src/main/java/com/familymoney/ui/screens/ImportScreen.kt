@@ -51,9 +51,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.charset.Charset
 
+private enum class ImportMode { FILE, PASTE }
+
 /** Section 12 fallback that works today: import a bank or card statement. */
 @Composable
-fun ImportScreen(vm: MainViewModel, navController: NavHostController) {
+fun ImportScreen(
+    vm: MainViewModel,
+    container: com.familymoney.AppContainer,
+    navController: NavHostController
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val accounts by vm.accounts.collectAsState()
@@ -67,6 +73,10 @@ fun ImportScreen(vm: MainViewModel, navController: NavHostController) {
     var accountId by remember { mutableStateOf<String?>(null) }
     var cardId by remember { mutableStateOf<String?>(null) }
     var defaultType by remember { mutableStateOf(TxType.EXPENSE) }
+    var mode by remember { mutableStateOf(ImportMode.FILE) }
+    var pastedText by remember { mutableStateOf("") }
+    var aiBusy by remember { mutableStateOf(false) }
+    var aiError by remember { mutableStateOf<String?>(null) }
 
     fun process(uri: Uri) {
         loading = true
@@ -105,6 +115,41 @@ fun ImportScreen(vm: MainViewModel, navController: NavHostController) {
         }
     }
 
+    /** Shared tail for both import paths: categorise and build entities. */
+    suspend fun buildPreview(rows: List<CsvImporter.Row>) {
+        prepared = CsvImporter.toTransactions(
+            rows = rows,
+            familyId = profile?.familyId.orEmpty(),
+            createdBy = profile?.name.orEmpty(),
+            accountId = accountId,
+            cardId = cardId,
+            categorize = { merchant -> vm.suggestCategory(merchant) }
+        )
+    }
+
+    fun parsePastedText() {
+        aiBusy = true
+        aiError = null
+        scope.launch {
+            when (val r = container.statementParser.parse(pastedText)) {
+                is com.familymoney.data.ai.StatementParser.Result.Error -> {
+                    aiError = r.message
+                    report = null
+                    prepared = emptyList()
+                }
+                is com.familymoney.data.ai.StatementParser.Result.Ok -> {
+                    report = CsvImporter.Report(
+                        rows = r.rows,
+                        skipped = r.skipped,
+                        detectedColumns = mapOf("מקור" to "טקסט שהודבק (AI)")
+                    )
+                    buildPreview(r.rows)
+                }
+            }
+            aiBusy = false
+        }
+    }
+
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let { fileName = it.lastPathSegment.orEmpty(); process(it) } }
@@ -115,6 +160,99 @@ fun ImportScreen(vm: MainViewModel, navController: NavHostController) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Pill(
+                        "📄 קובץ CSV", MaterialTheme.colorScheme.primary,
+                        selected = mode == ImportMode.FILE
+                    ) { mode = ImportMode.FILE; report = null; prepared = emptyList(); aiError = null }
+                    Pill(
+                        "✨ הדבקת טקסט (PDF)", MaterialTheme.colorScheme.secondary,
+                        selected = mode == ImportMode.PASTE
+                    ) { mode = ImportMode.PASTE; report = null; prepared = emptyList(); aiError = null }
+                }
+            }
+
+            if (mode == ImportMode.PASTE) {
+                item {
+                    SectionCard {
+                        Text("ייבוא מ־PDF", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(10.dp))
+                        listOf(
+                            "פתחו את דף החשבון (PDF) בנייד או במחשב.",
+                            "סמנו את טבלת התנועות והעתיקו (Ctrl+A ואז Ctrl+C).",
+                            "הדביקו כאן — ה־AI יחלץ את העסקאות.",
+                            "בדקו את התצוגה המקדימה ואשרו."
+                        ).forEachIndexed { i, step ->
+                            Row(Modifier.padding(vertical = 4.dp)) {
+                                Text("${'$'}{i + 1}. ", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    step,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "הטקסט נשלח לעיבוד ומשמש רק לחילוץ העסקאות. אין צורך להעתיק " +
+                                "מספרי חשבון או פרטים מזהים.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                item {
+                    SectionCard {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = pastedText,
+                            onValueChange = { pastedText = it },
+                            label = { Text("הדביקו כאן את תוכן דף החשבון") },
+                            placeholder = { Text("05/09/2026  שופרסל דיל  342.50 ...") },
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        if (pastedText.isNotBlank()) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                "${'$'}{pastedText.length} תווים",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        Button(
+                            onClick = { parsePastedText() },
+                            enabled = pastedText.trim().length >= 20 && !aiBusy,
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            if (aiBusy) {
+                                CircularProgressIndicator(
+                                    Modifier.width(18.dp).height(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text("מנתח…")
+                            } else {
+                                Text("✨ חלץ עסקאות")
+                            }
+                        }
+
+                        aiError?.let {
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (mode == ImportMode.FILE) item {
                 SectionCard {
                     Text("איך מייבאים", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(10.dp))
@@ -191,7 +329,7 @@ fun ImportScreen(vm: MainViewModel, navController: NavHostController) {
                 }
             }
 
-            item {
+            if (mode == ImportMode.FILE) item {
                 Button(
                     onClick = {
                         picker.launch(

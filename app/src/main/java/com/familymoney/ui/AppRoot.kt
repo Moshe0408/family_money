@@ -285,7 +285,7 @@ private fun AppNavHost(
         composable(Routes.WALLET) { WalletScreen(vm, navController) }
         composable(Routes.SETTINGS) { SettingsScreen(vm, container, navController) }
         composable(Routes.PRIVACY) { PrivacyScreen(vm, container, navController) }
-        composable(Routes.IMPORT) { ImportScreen(vm, navController) }
+        composable(Routes.IMPORT) { ImportScreen(vm, container, navController) }
         composable(Routes.LIABILITIES) { LiabilitiesScreen(vm, navController) }
         composable(Routes.UPDATE) { UpdateScreen(container, navController) }
         composable("${Routes.FAMILY}?code={code}") { entry ->

@@ -49,12 +49,16 @@ class GroqClient(
     data class Message(val role: String, val content: String)
 
     @Serializable
+    private data class ResponseFormat(val type: String)
+
+    @Serializable
     private data class ChatRequest(
         val model: String,
         val messages: List<Message>,
         val temperature: Double = 0.3,
         @SerialName("max_tokens") val maxTokens: Int = 1400,
-        val stream: Boolean = false
+        val stream: Boolean = false,
+        @SerialName("response_format") val responseFormat: ResponseFormat? = null
     )
 
     @Serializable
@@ -67,37 +71,53 @@ class GroqClient(
         data class Error(val message: String, val recoverable: Boolean) : Result
     }
 
-    suspend fun chat(messages: List<Message>, temperature: Double = 0.3): Result =
-        withContext(Dispatchers.IO) {
-            if (apiKeys.isEmpty()) {
-                return@withContext Result.Error("לא הוגדר מפתח AI בהגדרות.", recoverable = false)
-            }
+    /**
+     * @param jsonMode ask the model for a strict JSON object. Used by the
+     *   statement parser, where free text would be unusable.
+     */
+    suspend fun chat(
+        messages: List<Message>,
+        temperature: Double = 0.3,
+        jsonMode: Boolean = false,
+        maxTokens: Int = 1400
+    ): Result = withContext(Dispatchers.IO) {
+        if (apiKeys.isEmpty()) {
+            return@withContext Result.Error("לא הוגדר מפתח AI בהגדרות.", recoverable = false)
+        }
 
-            var lastError = "שגיאה לא ידועה"
-            for (useFallback in listOf(false, true)) {
-                val chosenModel = if (useFallback) fallbackModel else model
-                for (key in apiKeys) {
-                    when (val r = call(key, chosenModel, messages, temperature)) {
-                        is Result.Ok -> return@withContext r
-                        is Result.Error -> {
-                            lastError = r.message
-                            if (!r.recoverable) return@withContext r
-                        }
+        var lastError = "שגיאה לא ידועה"
+        for (useFallback in listOf(false, true)) {
+            val chosenModel = if (useFallback) fallbackModel else model
+            for (key in apiKeys) {
+                when (val r = call(key, chosenModel, messages, temperature, jsonMode, maxTokens)) {
+                    is Result.Ok -> return@withContext r
+                    is Result.Error -> {
+                        lastError = r.message
+                        if (!r.recoverable) return@withContext r
                     }
                 }
             }
-            Result.Error(lastError, recoverable = true)
         }
+        Result.Error(lastError, recoverable = true)
+    }
 
     private fun call(
         apiKey: String,
         modelId: String,
         messages: List<Message>,
-        temperature: Double
+        temperature: Double,
+        jsonMode: Boolean = false,
+        maxTokens: Int = 1400
     ): Result {
         val payload = json.encodeToString(
             ChatRequest.serializer(),
-            ChatRequest(model = modelId, messages = messages, temperature = temperature)
+            ChatRequest(
+                model = modelId,
+                messages = messages,
+                temperature = temperature,
+                maxTokens = maxTokens,
+                responseFormat = if (jsonMode) ResponseFormat("json_object") else null
+            )
         )
 
         val request = Request.Builder()

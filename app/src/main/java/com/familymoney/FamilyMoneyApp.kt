@@ -76,6 +76,10 @@ class AppContainer(app: Application) {
 
     val assistant: AiAssistant get() = AiAssistant(groqClient)
 
+    /** Extracts transactions from statement text pasted out of a PDF. */
+    val statementParser: com.familymoney.data.ai.StatementParser
+        get() = com.familymoney.data.ai.StatementParser(groqClient)
+
     /** User-supplied keys win over the ones baked in at build time. */
     fun activeAiKeys(): List<String> {
         val override = settings.aiKeysOverride
